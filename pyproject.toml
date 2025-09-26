@@ -8,7 +8,7 @@ packages = ["mearl"]
 [project]
 name = "mearl"
 version = "0.0.1"
-description = "RL environment for MealRec+ recommendations"
+description = "RL environment for meal recommendations."
 authors = [{ name = "Antonio Manjavacas" }, { name = "Andrea Morales"}]
 readme = "README.md"
 dependencies = ["gymnasium"]
