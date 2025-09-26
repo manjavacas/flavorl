@@ -1,1 +1,1 @@
-from mearl.envs.grid_world import GridWorldEnv
+from mearl.envs.mealrec import MealRecPlus
