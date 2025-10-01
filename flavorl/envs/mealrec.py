@@ -4,7 +4,7 @@ from gymnasium import spaces
 import numpy as np
 
 
-class MealRecPlus(gym.Env):
+class MealRec(gym.Env):
     metadata = {"render_modes": ["human"]}
 
     def __init__(self, obs_dim, act_dim, max_episode_steps = 21, render_mode=None):

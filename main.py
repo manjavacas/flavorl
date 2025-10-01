@@ -1,5 +1,5 @@
 import gymnasium as gym
-import mearl
+import flavorl
 
 
 def run_mealrec_env():
@@ -8,7 +8,7 @@ def run_mealrec_env():
     """
 
     # Create env
-    env = gym.make("mearl/MealRecPlus-v0", render_mode="human", obs_dim=20, act_dim=10)
+    env = gym.make("mearl/MealRec-v0", render_mode="human", obs_dim=20, act_dim=10)
 
     print(f"Environment: {env}")
     print(f"Observation space: {env.observation_space}")
