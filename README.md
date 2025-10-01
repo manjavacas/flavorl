@@ -8,10 +8,12 @@
 
 ## 📦 Installation
 
+Easy installation using `uv`:
+
 ```bash
 git clone https://github.com/manjavacas/flavorl.git
 cd flavorl
-pip install -e .
+uv sync
 ```
 
 ## 🎯 Quick start
