@@ -11,4 +11,8 @@ version = "0.0.1"
 description = "RL environment for meal recommendations."
 authors = [{ name = "Antonio Manjavacas" }, { name = "Andrea Morales"}]
 readme = "README.md"
-dependencies = ["gymnasium"]
+dependencies = [
+    "gymnasium",
+    "polars>=1.34.0",
+    "stable-baselines3>=2.7.0",
+]
