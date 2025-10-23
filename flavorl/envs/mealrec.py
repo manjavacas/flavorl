@@ -8,7 +8,7 @@ from flavorl.dataclasses import User, Meal, UserDataset, MealDataset, MealType, 
 # --- TODO: determine dimensions ---
 OBS_SPACE_DIM = 10  # n_features
 ACTION_SPACE_DIM = 5  # n_meals
-MAX_EPISODE_STEPS = 21 # 3 meals x 7 days
+MAX_EPISODE_STEPS = 21  # 3 meals x 7 days
 
 
 class MealRec(gym.Env):
@@ -35,10 +35,11 @@ class MealRec(gym.Env):
         self.meal_dataset: MealDataset = MealDataset(meal_csv)
 
         self.current_user: User = None
-        self.current_day: Day = None
         self.current_meal: Meal = None
+        self.current_day: Day = None
+        self.current_mealtype: MealType = None
         self.current_step: int = 0
-        self.current_obs: np.array = None
+        self.current_obs: dict = None
 
         # --- TODO: confirm obs data ---
         self.observation_space = spaces.Dict(
@@ -76,7 +77,7 @@ class MealRec(gym.Env):
 
         self.current_step = 0
         self.current_day = Day.MONDAY
-        self.current_meal = MealType.BREAKFAST
+        self.current_mealtype = MealType.BREAKFAST
 
         # Sample new user
         self.current_user = self.user_dataset.sample()
@@ -85,11 +86,12 @@ class MealRec(gym.Env):
         # --- TODO: confirm obs data ---
         self.current_obs = {
             "day": self.current_day.value,
-            "meal_type": self.current_meal.value,
+            "meal_type": self.current_mealtype.value,
             "rem_cal": self.current_user.daily_cal,
             "rem_prot": self.current_user.daily_nutr["protein"],
             "rem_ch": self.current_user.daily_nutr["ch"],
             "rem_fib": self.current_user.daily_nutr["fib"],
+            # --- TODO: complete ... ---
             "user_vegan": self.current_user.vegan,
             "user vegetarian": self.current_user.vegetarian,
         }
@@ -97,7 +99,7 @@ class MealRec(gym.Env):
         info = {
             "step": self.current_step,
             "day": self.current_day.name,
-            "meal_type": self.current_meal.name,
+            "meal_type": self.current_mealtype.name,
         }
 
         return self.current_obs, info
@@ -131,49 +133,48 @@ class MealRec(gym.Env):
         info = {
             "step": self.current_step,
             "day": self.current_day.name,
-            "meal_type": self.current_meal.name,
+            "meal_type": self.current_mealtype.name,
             "terminated": terminated,
             "truncated": truncated,
         }
 
         return self.current_obs, reward, terminated, truncated, info
 
-    def render(self):
+    def render(self) -> None:
         """
         Renders the environment.
         """
         # --- TODO: implement rendering ---
         raise NotImplementedError
 
-    def close(self):
+    def close(self) -> None:
         """
         Closes the environment and cleans up resources.
         """
         # --- TODO: implement env closing ---
         print("Closing environment...")
 
-    def _get_next_observation(self, action):
+    def _get_next_observation(self, action) -> dict:
         """
         Returns the next observation.
 
         Returns:
             np.array: next observation.
         """
-        # --- TODO: confirm get observation logic ---
 
         obs = self.current_obs.deepcopy()
 
         # Update obs time variables
         obs["day"] = Day((self.current_day.value + 1) % len(Day))
-        obs["meal_type"] = MealType((self.current_meal.value + 1) % len(MealType))
+        obs["meal_type"] = MealType((self.current_mealtype.value + 1) % len(MealType))
 
         # Update remaining calories / nutrients
-        meal = self._get_dataset_meal(action)
+        self.current_meal = self._get_dataset_meal(action)
 
-        obs["rem_cal"] -= meal.calories
-        obs["rem_prot"] -= meal.nutrients["prot"]
-        obs["rem_ch"] -= meal.nutrients["ch"]
-        obs["rem_fib"] -= meal.nutrients["fib"]
+        obs["rem_cal"] -= self.current_meal.calories
+        obs["rem_prot"] -= self.current_meal.nutrients["prot"]
+        obs["rem_ch"] -= self.current_meal.nutrients["ch"]
+        obs["rem_fib"] -= self.current_meal.nutrients["fib"]
 
         # --- TODO: complete obs ---
         # ...
