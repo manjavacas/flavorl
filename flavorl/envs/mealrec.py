@@ -49,6 +49,7 @@ class MealRec(gym.Env):
                 "rem_prot": spaces.Box(low=0, high=100, shape=(1,), dtype=np.float32),
                 "rem_ch": spaces.Box(low=0, high=100, shape=(1,), dtype=np.float32),
                 "rem_fib": spaces.Box(low=0, high=100, shape=(1,), dtype=np.float32),
+                # --- TODO: complete ... ---
                 "user_vegan": spaces.Discrete(2),
                 "user vegetarian": spaces.Discrete(2),
             }
