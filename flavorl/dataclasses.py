@@ -1,9 +1,25 @@
+from enum import Enum
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Type, TypeVar
+from typing import Any, List, Type, TypeVar
+
 import polars as pl
 import random
 
 T = TypeVar("T")
+
+class MealType(Enum):
+    BREAKFAST = 0
+    LUNCH = 1
+    DINNER = 2
+    
+class Day(Enum):
+    MONDAY = 0
+    TUESDAY = 1
+    WEDNESDAY = 2
+    THURSDAY = 3
+    FRIDAY = 4
+    SATURDAY = 5
+    SUNDAY = 6
 
 
 @dataclass
@@ -12,17 +28,25 @@ class User:
     Represents a single user entry.
 
     Attributes:
-        user_id (str): Unique identifier of the user.
-        dietary_preferences (str): Dietary preferences (e.g., vegan, vegetarian, omnivore).
-        allergies (str): Allergies or food restrictions.
+        user_idx (int): Unique identifier for the user.
+        allergies (dict[bool]): dict indicating known allergies.
+        intoler (dict[bool]): dict indicating the user's food intolerances.
+        vegan (bool): Whether the user follows a vegan diet.
+        vegetarian (bool): Whether the user follows a vegetarian diet.
+        preferences (str): Description of the user's dietary preferences or tastes.
+        daily_cal (float): Remaining daily calories to be consumed.
+        daily_nutr (dict[str, float]): Remaining daily nutrients to be consumed.
     """
 
-    user_id: str
+    user_idx: int
 
-    # --- TODO: define additional user info ---
-    dietary_preferences: str
-    allergies: str
-
+    allergies: dict[str, bool]
+    intoler: dict[str, bool]
+    vegan: bool
+    vegetarian: bool
+    preferences: str
+    daily_cal: float
+    daily_nutr: dict[str, float]
 
 @dataclass
 class Meal:
@@ -30,26 +54,23 @@ class Meal:
     Represents a single meal item with its nutritional information.
 
     Attributes:
-        name (str): Name of the meal.
-        type (str): Type or category of the meal (e.g., breakfast, lunch, snack).
-        calories (int, optional): Total calories in the meal.
-        protein_g (float): Protein content in grams.
-        fat_g (float): Fat content in grams.
-        carbs_g (float): Carbohydrate content in grams.
-        fiber_g (float): Fiber content in grams.
-        sodium_mg (float): Sodium content in milligrams.
+        meal_idx (int): Unique identifier for the meal.
+        meal_type (int): Integer representing the meal type (e.g., 0 breakfast, 1 lunch, etc.).
+        calories (float): Total caloric content of the meal.
+        nutrients (dict[str, float]): dictionary mapping nutrient names to their corresponding quantities.
+        ingredients (str): Description or list of the ingredients used in the meal.
+        tags (str): Descriptive tags or labels associated with the meal.
+        healthy_score (float): Aggregated healthy scores (course_fsa + course_who).
     """
 
-    name: str
-    type: str
+    meal_idx: int
 
-    # --- TODO: define additional meal info ---
-    calories: int
-    protein_g: float
-    fat_g: float
-    carbs_g: float
-    fiber_g: float
-    sodium_mg: float
+    meal_type: int
+    calories: float
+    nutrients: dict[str, float]
+    ingredients: str
+    tags: str
+    healthy_score : float
 
 
 class BaseDataset:
@@ -76,7 +97,7 @@ class BaseDataset:
 
         Args:
             n (int): Number of items to sample.
-            **filters: Column filters, e.g., type="fruit" or gender="female".
+            **filters: Column filters.
 
         Returns:
             List[T]: Sampled objects as instances of the dataclass.
@@ -89,7 +110,7 @@ class BaseDataset:
         if df.is_empty():
             return []
 
-        rows: List[Dict[str, Any]] = df.to_dicts()
+        rows: List[dict[str, Any]] = df.to_dicts()
         if n <= len(rows):
             sampled_rows = random.sample(rows, n)
         else:

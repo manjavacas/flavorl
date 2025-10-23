@@ -3,15 +3,12 @@ import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
 
-from flavorl.mealrec_data import UserDataset, MealDataset
+from flavorl.dataclasses import User, Meal, UserDataset, MealDataset, MealType, Day
 
 # --- TODO: determine dimensions ---
-OBS_SPACE_DIM = 10
-ACTION_SPACE_DIM = 5
-MAX_EPISODE_STEPS = 21
-
-DAYS_DICT = {0: "mon", 1: "tue", 2: "wed", 3: "thu", 4: "fri", 5: "sat", 6: "sun"}
-MEALS_DICT = {0: "breakfast", 1: "lunch", 2: "dinner"}
+OBS_SPACE_DIM = 10  # n_features
+ACTION_SPACE_DIM = 5  # n_meals
+MAX_EPISODE_STEPS = 21 # 3 meals x 7 days
 
 
 class MealRec(gym.Env):
@@ -32,20 +29,31 @@ class MealRec(gym.Env):
             meal_csv (str): Path to the CSV file containing meal data.
             render_mode (str, optional): Render mode. Defaults to None.
         """
-        self.render_mode = render_mode
+        self.render_mode: str = render_mode
 
-        self.user_dataset = UserDataset(user_csv)
-        self.meal_dataset = MealDataset(meal_csv)
+        self.user_dataset: UserDataset = UserDataset(user_csv)
+        self.meal_dataset: MealDataset = MealDataset(meal_csv)
 
-        self.current_user = None
-        self.current_obs = None
-        self.current_day = None
-        self.current_meal = None
-        self.current_step = 0
+        self.current_user: User = None
+        self.current_day: Day = None
+        self.current_meal: Meal = None
+        self.current_step: int = 0
+        self.current_obs: np.array = None
 
-        self.observation_space = spaces.Box(
-            low=0, high=1, shape=(OBS_SPACE_DIM,), dtype=np.float32
+        # --- TODO: confirm obs data ---
+        self.observation_space = spaces.Dict(
+            {
+                "day": spaces.Discrete(7),
+                "meal_type": spaces.Discrete(3),
+                "rem_cal": spaces.Box(low=0, high=100, shape=(1,), dtype=np.float32),
+                "rem_prot": spaces.Box(low=0, high=100, shape=(1,), dtype=np.float32),
+                "rem_ch": spaces.Box(low=0, high=100, shape=(1,), dtype=np.float32),
+                "rem_fib": spaces.Box(low=0, high=100, shape=(1,), dtype=np.float32),
+                "user_vegan": spaces.Discrete(2),
+                "user vegetarian": spaces.Discrete(2),
+            }
         )
+
         self.action_space = spaces.Discrete(ACTION_SPACE_DIM)
 
     def reset(self, seed: int = None, options: dict = None):
@@ -61,34 +69,34 @@ class MealRec(gym.Env):
         Returns:
             tuple:
                 - observation (dict): Initial observation of the environment.
-                - info (dict): Additional information including step, day, and meal.
+                - info (dict): Additional information.
         """
         super().reset(seed=seed)
 
         self.current_step = 0
+        self.current_day = Day.MONDAY
+        self.current_meal = MealType.BREAKFAST
 
         # Sample new user
         self.current_user = self.user_dataset.sample()
 
         # Initialize observation dictionary
-        # --- TODO: define obs data ---
+        # --- TODO: confirm obs data ---
         self.current_obs = {
-            "day": 0,
-            "meal": 0,
-            "nutrient_X": 0,
-            "nutrient_Y": 0,
-            "nutrient_Z": 0,
-            "preference_X": 0,
-            "preference_Y": 0,
+            "day": self.current_day.value,
+            "meal_type": self.current_meal.value,
+            "rem_cal": self.current_user.daily_cal,
+            "rem_prot": self.current_user.daily_nutr["protein"],
+            "rem_ch": self.current_user.daily_nutr["ch"],
+            "rem_fib": self.current_user.daily_nutr["fib"],
+            "user_vegan": self.current_user.vegan,
+            "user vegetarian": self.current_user.vegetarian,
         }
-
-        self.current_day = 0
-        self.current_meal = 0
 
         info = {
             "step": self.current_step,
-            "day": DAYS_DICT[self.current_day],
-            "meal": MEALS_DICT[self.current_meal],
+            "day": self.current_day.name,
+            "meal_type": self.current_meal.name,
         }
 
         return self.current_obs, info
@@ -106,13 +114,11 @@ class MealRec(gym.Env):
                 - reward (float): Reward obtained from the action.
                 - terminated (bool): True if the episode has terminated.
                 - truncated (bool): True if the episode was truncated due to max steps.
-                - info (dict): Additional info including step, day, meal, and termination flags.
+                - info (dict): Additional info.
         """
         assert self.action_space.contains(action), f"Invalid action: {action}"
 
-        # --- TODO: simulate interaction ---
-        # --- TODO: define obs data ---
-        self.current_obs = self.observation_space.sample()
+        self.current_obs = self._get_next_observation(action)
 
         terminated = self._check_termination()
         truncated = self.current_step >= MAX_EPISODE_STEPS
@@ -120,13 +126,11 @@ class MealRec(gym.Env):
         reward = self._compute_reward()
 
         self.current_step += 1
-        self.current_day = (self.current_day + 1) % len(DAYS_DICT)
-        self.current_meal = (self.current_meal + 1) % len(MEALS_DICT)
 
         info = {
             "step": self.current_step,
-            "day": DAYS_DICT[self.current_day],
-            "meal": MEALS_DICT[self.current_meal],
+            "day": self.current_day.name,
+            "meal_type": self.current_meal.name,
             "terminated": terminated,
             "truncated": truncated,
         }
@@ -147,6 +151,34 @@ class MealRec(gym.Env):
         # --- TODO: implement env closing ---
         print("Closing environment...")
 
+    def _get_next_observation(self, action):
+        """
+        Returns the next observation.
+
+        Returns:
+            np.array: next observation.
+        """
+        # --- TODO: confirm get observation logic ---
+
+        obs = self.current_obs.deepcopy()
+
+        # Update obs time variables
+        obs["day"] = Day((self.current_day.value + 1) % len(Day))
+        obs["meal_type"] = MealType((self.current_meal.value + 1) % len(MealType))
+
+        # Update remaining calories / nutrients
+        meal = self._get_dataset_meal(action)
+
+        obs["rem_cal"] -= meal.calories
+        obs["rem_prot"] -= meal.nutrients["prot"]
+        obs["rem_ch"] -= meal.nutrients["ch"]
+        obs["rem_fib"] -= meal.nutrients["fib"]
+
+        # --- TODO: complete obs ---
+        # ...
+
+        return obs
+
     def _check_termination(self) -> bool:
         """
         Checks if the episode should terminate.
@@ -166,3 +198,17 @@ class MealRec(gym.Env):
         """
         # --- TODO: implement reward computation ---
         return 0.0
+
+    def _get_dataset_meal(self, meal_idx: int) -> Meal:
+        """
+        Looks for a given meal in the MealDataset
+
+        Args:
+            meal_idx (int): meal index.
+
+        Return:
+            Meal: corresponding meal.
+        """
+
+        # --- TODO: implement meal search ---
+        raise NotImplementedError
