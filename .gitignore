@@ -4,6 +4,7 @@
 flavorl/data/*.csv
 flavorl/data/*.zip
 
+flavorl/data
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
