@@ -1,15 +1,18 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch, re, json
+import pandas as pd
+import ast
 
 model_name = "Qwen/Qwen2.5-7B-Instruct" 
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
     torch_dtype=torch.bfloat16,
-    device_map="auto"
+    device_map={"": 0} #device_map="auto"
 )
 
-def classify_recipe_qwen(title,ingredients, directions, allow_multi=True, temperature=0.0):
+
+def classify_recipe_qwen(course_id_,title,ingredients, directions, allow_multi=True, temperature=0.0):
     prompt = f"""
 Title: {title}
 Ingredients: {ingredients}
@@ -64,14 +67,37 @@ If only one applies, return a single-item list. Use only these labels.
             except Exception:
                 continue
 
-    return {"raw_output": gen_text, "categories": categories}
+    return {"course_id": course_id_, "raw_output": gen_text, "categories": categories}
 
 
+print("Sanity check with a random example")
 # --- 4) Example usage ---
-example = classify_recipe_qwen(
+example = classify_recipe_qwen(1,
     title="Cheeseburger",
     ingredients="burger, bread, lettuce, tomato, cheese",
     directions="assemble the burger with lettuce, tomato, and cheese",
     allow_multi=True
 )
 print(example)
+
+
+print("___________________________________________________")
+print("Let's classify")
+
+df = pd.read_csv("course_processed.csv")
+
+res = []
+for i,elem in enumerate(df.to_dict("records")):
+    print(i)
+    ingredients_ = elem['ingredients'].replace('^',', ')
+    cooking_directions_ = ast.literal_eval(elem['cooking_directions'])['directions']
+
+    res.append(classify_recipe_qwen(elem['course_id'],elem['course_name'],ingredients_, cooking_directions_))
+
+    if i%10 == 0:
+        res_df = pd.DataFrame(res)
+        res_df.to_csv("course_classification_partial.csv", index=False)
+
+res_df = pd.DataFrame(res)       
+res_df.to_csv("course_classification.csv", index=False)
+
